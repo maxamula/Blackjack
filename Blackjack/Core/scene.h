@@ -13,7 +13,12 @@ namespace blackjack
 
 		inline bool IsValid() const { return m_id != INVALID_ID; }
 
-		CMPTransformation& GetTransformation();
+		// Components managing stuff here
+
+		CMP_TRANSFORMATION& GetTransformation() const;		
+		void SetSprite(const CMP_SPRITE& sprite);
+		CMP_SPRITE& GetSprite() const;
+		bool HasSprite() const;
 
 	private:
 		uint32_t m_id = INVALID_ID;
@@ -29,8 +34,10 @@ namespace blackjack
 		GameObject CreateObject();
 		void DestroyObject(const GameObject& object);
 
+		void Render() const;
+
 	private:
-		entt::registry m_reg;			// components pool
-		std::vector<GameObject> m_root;	// children
+		entt::registry m_reg;						// components pool
+		 std::vector<GameObject> m_root;			// children
 	};
 }

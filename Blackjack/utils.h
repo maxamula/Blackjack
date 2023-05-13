@@ -26,22 +26,11 @@ namespace blackjack
             m_callbacks.erase(std::remove(m_callbacks.begin(), m_callbacks.end(), callback), m_callbacks.end());
         }
 
-        void FireOnce(const EventCallback& callback)
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_callbacksOnce.push(callback);
-        }
-
         void operator()(Args... args)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             for (auto& callback : m_callbacks)
                 callback(args...);
-            while (!m_callbacksOnce.empty())
-            {
-                m_callbacksOnce.top()(args...);
-                m_callbacksOnce.pop();
-            }
         }
 
         void Clear()
@@ -52,7 +41,6 @@ namespace blackjack
 
     private:
         std::vector<EventCallback> m_callbacks;
-        std::stack<EventCallback> m_callbacksOnce;
         std::mutex m_mutex;
     };
 

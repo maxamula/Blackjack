@@ -3,11 +3,12 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="UI\idrawable.cpp" />
-    <ClCompile Include="Core\deck.cpp" />
-    <ClCompile Include="Core\card.cpp" />
+    <ClCompile Include="Game\deck.cpp" />
+    <ClCompile Include="Game\card.cpp" />
     <ClCompile Include="Core\scene.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="Core\components.cpp" />
+    <ClCompile Include="Core\animations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -15,10 +16,11 @@
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="UI\idrawable.h" />
-    <ClInclude Include="Core\deck.h" />
-    <ClInclude Include="Core\card.h" />
+    <ClInclude Include="Game\deck.h" />
+    <ClInclude Include="Game\card.h" />
     <ClInclude Include="Core\scene.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="Core\components.h" />
+    <ClInclude Include="Core\animations.h" />
   </ItemGroup>
 </Project>
