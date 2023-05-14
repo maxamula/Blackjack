@@ -3,6 +3,8 @@
 
 #define NUM_SUIT_CARDS 13
 
+#undef GetObject
+
 namespace blackjack
 {
 	namespace
@@ -47,12 +49,14 @@ namespace blackjack
 			PlayCard card;
 			card.m_cardObject = object;
 			card.m_cardObject.SetSprite(g_cardSprites[suit][value - 2]);
-			card.m_cardObject.GetTransformation().x = 0.5;
-			card.m_cardObject.GetTransformation().y = 0.5;
+			card.m_cardObject.GetTransformation().x = 0.0;
+			card.m_cardObject.GetTransformation().y = 0.0;
 			return card;
 		}
 
 		void RevealAndMoveToHand();
+
+		inline GameObject& GetObject() { return m_cardObject; }
 
 	private:
 		GameObject m_cardObject;

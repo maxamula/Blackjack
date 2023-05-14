@@ -9,6 +9,8 @@
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="Core\components.cpp" />
     <ClCompile Include="Core\animations.cpp" />
+    <ClCompile Include="Game\mainmenu.cpp" />
+    <ClCompile Include="Core\resource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -22,5 +24,8 @@
     <ClInclude Include="utils.h" />
     <ClInclude Include="Core\components.h" />
     <ClInclude Include="Core\animations.h" />
+    <ClInclude Include="Game\mainmenu.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="Core\resource.h" />
   </ItemGroup>
 </Project>

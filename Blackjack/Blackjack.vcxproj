@@ -144,6 +144,8 @@
     <ClCompile Include="Game\card.cpp" />
     <ClCompile Include="Game\deck.cpp" />
     <ClCompile Include="Core\scene.cpp" />
+    <ClCompile Include="Game\mainmenu.cpp" />
+    <ClCompile Include="Core\resource.cpp" />
     <ClCompile Include="UI\idrawable.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="utils.cpp" />
@@ -158,6 +160,9 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="Game\deck.h" />
     <ClInclude Include="Core\scene.h" />
+    <ClInclude Include="Game\mainmenu.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="Core\resource.h" />
     <ClInclude Include="UI\idrawable.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
