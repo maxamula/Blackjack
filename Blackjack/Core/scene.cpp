@@ -19,7 +19,7 @@ namespace blackjack
 		};
 
 		ItemManager<GAME_OBJECT_NODE> g_objects;
-		std::mutex g_objMutex;
+		std::recursive_mutex g_objMutex;
 
 	} // Anon namespace
 
@@ -120,6 +120,19 @@ namespace blackjack
 #pragma endregion
 #pragma region GameObject
 
+	bool GameObject::IsValid() const
+	{
+		bool ret = false;
+		ret |= m_id != uint32_invalid;
+		if (ret)
+		{
+			//std::lock_guard lock(g_objMutex);
+			auto& node = g_objects.Get(m_id);
+			ret |= node.scene->m_reg.valid(node.entityId);
+		}
+		return ret;
+	}
+
 	Scene& GameObject::GetScene() const
 	{
 		std::lock_guard lock(g_objMutex);
@@ -154,7 +167,7 @@ namespace blackjack
 		// recursive delete children and objects down the graph
 		for (auto& child : node.children)
 		{
-			//object.DestroyChild(child);
+			child.Destroy();
 		}
 		// remove from parent
 		if (node.parent.m_id != uint32_invalid)	// NOT root object (parent is another object)

@@ -51,11 +51,11 @@ namespace blackjack
 
 		void Reset()
 		{
-			for (auto& card : m_hand)
+			if (m_hand.size())
 			{
-				card.GetObject().Destroy();
-			}
-			m_hand.clear();
+				m_hand[0].GetObject().Destroy();	// Destroy root, child will be destroyed automatically
+				m_hand.clear();
+			}	
 		}
 
 		uint32_t GetHandSum()

@@ -20,7 +20,7 @@ namespace blackjack
 
 		inline bool operator==(const GameObject& o) const { return m_id == o.m_id; }
 
-		inline bool IsValid() const { return m_id != uint32_invalid; }
+		bool IsValid() const;
 
 		Scene& GetScene() const;
 		std::string GetName() const;

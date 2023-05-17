@@ -18,7 +18,6 @@ namespace blackjack
 
         static void UpdateAnimations(float dt)
         {
-            //std::vector<std::vector<Animation*>::iterator> removeList;
             for (auto it = s_animations.begin(); it != s_animations.end();)
             {
                 if ((*it)->Update(dt))

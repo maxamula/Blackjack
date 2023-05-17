@@ -104,7 +104,7 @@ namespace blackjack
 		DISABLE_COPY(Game);
 		Game(Scene& scene, Player& p)
 			: m_scene(scene), m_player(p), m_hand(scene, -300, -200),
-			m_dealer(scene, 300, 200), m_deck(), m_gameManager(m_scene.CreateObject("GameManager"))
+			m_dealer(scene, 300, 200), m_deck()
 		{
 			std::function<void(void)> overlay =
 				[&]() 
@@ -123,7 +123,7 @@ namespace blackjack
 				ImGui::End();
 				ImGui::GetIO().FontGlobalScale = 1.0f;
 			};
-			m_gameManager.SetOverlay(overlay);
+			//m_hitButton.SetOverlay(overlay);
 
 			// HUD creation
 			m_hitButton = scene.CreateObject("Hit button");
@@ -155,10 +155,14 @@ namespace blackjack
 
 		void Destroy()
 		{
+			m_bpHitBtn.reset();
+			m_bpStandBtn.reset();
 			m_handLabelScoreObject.Destroy();
-			m_gameManager.Destroy();
+			m_hitButton.Destroy();
+			m_standButton.Destroy();
 			m_hand.Reset();
 			m_dealer.Reset();
+
 		}
 		
 		void DrawDebugOverlay()
@@ -216,8 +220,6 @@ namespace blackjack
 		
 		std::shared_ptr<BtnBlueprint> m_bpHitBtn;
 		std::shared_ptr<BtnBlueprint> m_bpStandBtn;
-
-		GameObject m_gameManager;
 	};
 
 	class GameBlueprint : public Blueprint
