@@ -2,14 +2,15 @@
 
 namespace blackjack
 {
-	ResourceManager g_resourceManager;
+	ResourceManager& Resources()
+	{
+		static ResourceManager s_resourceManager;
+		return s_resourceManager;
+	}
 
 	Resource::~Resource()
 	{
-		g_resourceManager._RemoveFromLoaded(m_resourceTableHash);
+		Resources()._RemoveFromLoaded(m_resourceTableHash);
 		_Free();
 	}
-
-
-
 }

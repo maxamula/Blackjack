@@ -5,7 +5,7 @@ namespace blackjack
 {
 	class ResourceManager;
 
-	extern ResourceManager g_resourceManager;
+	ResourceManager& Resources();
 
 	class Resource
 	{
@@ -44,6 +44,7 @@ namespace blackjack
 				return resource;
 			}
 		}
+		
 
 	private:
 
@@ -53,16 +54,25 @@ namespace blackjack
 			auto it = m_resources.find(hash);
 			if (it != m_resources.end()) // if resource is loaded
 			{
+				
 				m_resources.erase(it); // remove resource from map
 			}
 		}
 		std::mutex m_mutex;
 		std::unordered_map<uint64_t, std::weak_ptr<Resource>> m_resources;
+		uint32_t m_leaks = 0;
 	};
 
 	class Texture : public Resource
 	{
 	public:
+		static std::shared_ptr<Texture> PlaceTexture(SDL_Texture* texture)
+		{
+			std::shared_ptr<Texture> tex = std::make_shared<Texture>();
+			tex->m_tex = texture;
+			return tex;
+		}
+
 		SDL_Texture* GetTexture() const { return m_tex; }
 	private:
 		SDL_Texture* m_tex = nullptr;

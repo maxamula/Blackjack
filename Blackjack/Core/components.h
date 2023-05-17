@@ -1,5 +1,4 @@
 #pragma once
-#include "animations.h"
 #include "resource.h"
 
 namespace blackjack
@@ -18,22 +17,36 @@ namespace blackjack
 	{
 		CMP_SPRITE() = default;
 
+		void operator=(const CMP_SPRITE& o)
+		{
+			width = o.width;
+			height = o.height;
+			sprite = o.sprite;
+			visible = o.visible;
+		}
+
 		static CMP_SPRITE CreateSprite(std::string path)
 		{
 			//SDL_Texture* tex = IMG_LoadTexture(g_renderer, path.c_str());
-			std::shared_ptr<Texture> tex = g_resourceManager.GetResource<Texture>(path.c_str());
+			std::shared_ptr<Texture> tex = Resources().GetResource<Texture>(path.c_str());
 			SDL_SetTextureScaleMode(tex->GetTexture(), SDL_ScaleModeBest);
 			CMP_SPRITE sprite(tex);
 			SDL_QueryTexture(tex->GetTexture(), nullptr, nullptr, &sprite.width, &sprite.height);
 			return sprite;
 		}
 
-		CMP_SPRITE(std::shared_ptr<Texture> texture, AnimationStateMachine* animation = nullptr)
-			: sprite(texture), animation(animation)
+		CMP_SPRITE(std::shared_ptr<Texture> texture)
+			: sprite(texture)
 		{}
 		int width;
 		int height;
 		std::shared_ptr<Texture> sprite;
-		AnimationStateMachine* animation = nullptr;
+		bool visible = true;
+		uint8_t m_pad[3];
+	};
+
+	struct CMP_IMGUI
+	{
+		std::function<void(void)> func;
 	};
 }

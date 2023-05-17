@@ -6,10 +6,10 @@ namespace blackjack
 {
 	class Scene;
 
-	class EventHandler;
-	struct CMP_EVENT_HANDLER
+	class Blueprint;
+	struct CMP_BLUEPRINT
 	{
-		std::unique_ptr<EventHandler> handler;
+		std::shared_ptr<Blueprint> bp;
 	};
 
 	class GameObject
@@ -22,6 +22,14 @@ namespace blackjack
 
 		inline bool IsValid() const { return m_id != uint32_invalid; }
 
+		Scene& GetScene() const;
+		std::string GetName() const;
+
+		GameObject CreateObject(std::string name);
+		void Destroy();
+
+
+
 		// Components managing stuff here
 
 		CMP_TRANSFORMATION& GetTransformation() const;		
@@ -29,22 +37,32 @@ namespace blackjack
 		CMP_SPRITE& GetSprite() const;
 		bool HasSprite() const;
 		
-		void SetHandler(std::unique_ptr<EventHandler> handler);
-		EventHandler* GetHandler() const;
+		void SetBlueprint(std::shared_ptr<Blueprint> handler);
+		Blueprint* GetBlueprint() const;
+
+		void SetOverlay(std::function<void(void)> func);
 	private:
 		uint32_t m_id = uint32_invalid;
 	};
 
-#pragma region Event Handler
+#pragma region Blueprint
 
-	class EventHandler
+	class Blueprint // defines Game object behaviour
 	{
 	public:
-		EventHandler() = delete;
-		EventHandler(const GameObject& obj)
-			: m_object(obj)
+		Blueprint(const GameObject& object)
+			: m_object(object)
 		{}
-		virtual bool HandleEvent(SDL_Event& event) = 0;
+
+		// Event handler
+		virtual bool HandleEvent(SDL_Event& e) { return false; };
+
+		// Init
+		virtual void Initialize() {};
+
+		// Update (called every frame)
+		virtual void Update(float fDeletaTime) {};
+
 	protected:
 		GameObject m_object;
 	};
@@ -59,14 +77,17 @@ namespace blackjack
 		DISABLE_COPY(Scene);
 		void Destroy();
 
-		GameObject CreateObject();
-		void DestroyObject(const GameObject& object);
+		GameObject CreateObject(std::string name);
 
 		void Render() const;
+		void DrawDebugOverlay() const;
+		void Overlay() const;
 		void HandleEvent(SDL_Event& e) const;
 
 	private:
-		entt::registry m_reg;						// components pool
-		 std::vector<GameObject> m_root;			// children
+		void _DrawSceneGraphNode(const GameObject& object) const;
+
+		entt::registry m_reg;					// components pool
+		std::vector<GameObject> m_root;			// children
 	};
 }

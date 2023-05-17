@@ -1,5 +1,7 @@
 #include "scene.h"
 #include "utils.h"
+#include <queue>
+#include "imgui/imgui.h"
 
 #define CHECK_VALID if(!IsValid()) throw new std::exception("Ivalid game object")
 
@@ -10,6 +12,7 @@ namespace blackjack
 		struct GAME_OBJECT_NODE
 		{
 			entt::entity entityId;					// user for components lookup
+			std::string name;
 			Scene* scene;							// Parent scene reference
 			GameObject parent;						// Parent object (invalid if object is root object)
 			std::vector<GameObject> children;		// scenegraph impl
@@ -17,28 +20,136 @@ namespace blackjack
 
 		ItemManager<GAME_OBJECT_NODE> g_objects;
 		std::mutex g_objMutex;
+
 	} // Anon namespace
 
 	void RenderGameObject(const GameObject& object);
 
 #pragma region Scene
-	GameObject Scene::CreateObject()
+	void Scene::Destroy()
+	{
+
+	}
+
+	GameObject Scene::CreateObject(std::string name)
 	{
 		entt::entity entityId = m_reg.create();
 		// Every game object has transformation component by default and cannot be removed
 		m_reg.emplace_or_replace<CMP_TRANSFORMATION>(entityId);
 		GameObject object;
 		std::lock_guard lock(g_objMutex);
-		GAME_OBJECT_NODE node{ entityId, this, GameObject(), {} };
+		GAME_OBJECT_NODE node{ entityId, name, this, GameObject(), {} };
 		object.m_id = g_objects.Add(std::move(node));
 		m_root.emplace_back(object);
 		return object;
 	}
 
-	void Scene::DestroyObject(const GameObject& object)
+	void Scene::Render() const
+	{
+		std::queue<GameObject> queue;
+		for (const auto& object : m_root)
+		{
+			queue.push(object);
+		}
+
+		while (!queue.empty())
+		{
+			const auto& object = queue.front();
+			RenderGameObject(object);
+			queue.pop();
+
+			const auto& node = g_objects.Get(object.m_id);
+			for (const auto& child : node.children)
+			{
+				queue.push(child);
+			}
+		}
+	}
+
+	void Scene::DrawDebugOverlay() const
+	{
+		if(ImGui::CollapsingHeader("Scene Graph"))
+		{
+			for (const auto& object : m_root)
+			{
+				_DrawSceneGraphNode(object);
+			}
+		}
+		
+	}
+
+	void Scene::Overlay() const
+	{
+		auto view = m_reg.view<CMP_IMGUI>();
+		for (auto [entity, overlay] : view.each()) 
+		{
+			overlay.func();
+		}
+	}
+
+	void Scene::_DrawSceneGraphNode(const GameObject& object) const
+	{
+		// Render a node for the current object
+		bool node_open = ImGui::TreeNodeEx(
+			(void*)(intptr_t)object.m_id, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow,
+			"%s", object.GetName().c_str());
+
+		// Recursively render the children of this object
+		if (node_open)
+		{
+			const auto& node = g_objects.Get(object.m_id);
+			for (const auto& child : node.children)
+			{
+				_DrawSceneGraphNode(child);
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	void Scene::HandleEvent(SDL_Event& e) const
+	{
+		for (auto& object : m_root)
+		{
+			Blueprint* bp = object.GetBlueprint();
+			if (bp)
+				bp->HandleEvent(e);
+		}
+	}
+
+#pragma endregion
+#pragma region GameObject
+
+	Scene& GameObject::GetScene() const
 	{
 		std::lock_guard lock(g_objMutex);
-		auto& node = g_objects.Get(object.m_id);
+		return *g_objects.Get(m_id).scene;
+	}
+
+	std::string GameObject::GetName() const
+	{
+		std::lock_guard lock(g_objMutex);
+		return g_objects.Get(m_id).name;
+	}
+
+	GameObject GameObject::CreateObject(std::string name)	// Create relative to current object
+	{
+		std::lock_guard lock(g_objMutex);
+		entt::registry& m_reg = g_objects.Get(m_id).scene->m_reg;
+		entt::entity entityId = m_reg.create();
+		// Every game object has transformation component by default and cannot be removed
+		m_reg.emplace_or_replace<CMP_TRANSFORMATION>(entityId);
+		GameObject object;	
+		GAME_OBJECT_NODE node{ entityId, name, g_objects.Get(m_id).scene, *this, {} };
+		object.m_id = g_objects.Add(std::move(node));
+		g_objects.Get(m_id).children.emplace_back(object);
+		return object;
+	}
+
+	void GameObject::Destroy()
+	{
+		std::lock_guard lock(g_objMutex);
+		auto& node = g_objects.Get(m_id);
 		auto scene = node.scene;
 		// recursive delete children and objects down the graph
 		for (auto& child : node.children)
@@ -49,40 +160,19 @@ namespace blackjack
 		if (node.parent.m_id != uint32_invalid)	// NOT root object (parent is another object)
 		{
 			auto& parentNode = g_objects.Get(node.parent.m_id);
-			auto it = std::find(parentNode.children.begin(), parentNode.children.end(), object);
+			auto it = std::find(parentNode.children.begin(), parentNode.children.end(), *this);
 			if (it != parentNode.children.end())
 				parentNode.children.erase(it);
 		}
 		else  // Object is root object (Parent - scene)
 		{
-			auto it = std::find(scene->m_root.begin(), scene->m_root.end(), object);
+			auto it = std::find(scene->m_root.begin(), scene->m_root.end(), *this);
 			if (it != scene->m_root.end())
 				scene->m_root.erase(it);
 		}
 		// Remove from components registry
 		scene->m_reg.destroy(node.entityId);
 	}
-
-	void Scene::Render() const
-	{
-		for (auto& object : m_root)
-		{
-			RenderGameObject(object);
-		}
-	}
-
-	void Scene::HandleEvent(SDL_Event& e) const
-	{
-		for (auto& object : m_root)
-		{
-			EventHandler* handler = object.GetHandler();
-			if (handler)
-				handler->HandleEvent(e);
-		}
-	}
-
-#pragma endregion
-#pragma region GameObject
 
 	CMP_TRANSFORMATION& GameObject::GetTransformation() const
 	{
@@ -116,22 +206,32 @@ namespace blackjack
 		return reg.try_get<CMP_SPRITE>(g_objects.Get(m_id).entityId) != nullptr;
 	}
 
-	void GameObject::SetHandler(std::unique_ptr<EventHandler> handler)
+	void GameObject::SetBlueprint(std::shared_ptr<Blueprint> handler)
 	{
 		CHECK_VALID;
 		std::lock_guard lock(g_objMutex);
 		entt::registry& reg{ g_objects.Get(m_id).scene->m_reg };
-		reg.emplace_or_replace<CMP_EVENT_HANDLER>(g_objects.Get(m_id).entityId, std::move(handler));
+		handler->Initialize();
+		reg.emplace_or_replace<CMP_BLUEPRINT>(g_objects.Get(m_id).entityId, std::move(handler));
 	}
 
-	EventHandler* GameObject::GetHandler() const
+	Blueprint* GameObject::GetBlueprint() const
 	{
 		CHECK_VALID;
 		std::lock_guard lock(g_objMutex);
 		entt::registry& reg{ g_objects.Get(m_id).scene->m_reg };
-		CMP_EVENT_HANDLER* component = reg.try_get<CMP_EVENT_HANDLER>(g_objects.Get(m_id).entityId);
-		return component ? component->handler.get() : nullptr;
+		CMP_BLUEPRINT* component = reg.try_get<CMP_BLUEPRINT>(g_objects.Get(m_id).entityId);
+		return component ? component->bp.get() : nullptr;
 	}
+
+	void GameObject::SetOverlay(std::function<void(void)> func)
+	{
+		CHECK_VALID;
+		std::lock_guard lock(g_objMutex);
+		entt::registry& reg{ g_objects.Get(m_id).scene->m_reg };
+		reg.emplace_or_replace<CMP_IMGUI>(g_objects.Get(m_id).entityId, func);
+	}
+
 
 #pragma endregion
 
@@ -141,16 +241,12 @@ namespace blackjack
 		{
 			const CMP_TRANSFORMATION& transform = object.GetTransformation();
 			const CMP_SPRITE& sprite = object.GetSprite();
-			if (!sprite.animation)
+			if (sprite.visible)
 			{
-				float x = 1280 - (transform.x + 640) - sprite.width / 2.0f;
-				float y = 720 - (transform.y + 360) - sprite.height / 2.0f;
+				float x = transform.x - sprite.width / 2.0f + 640;
+				float y = -transform.y - sprite.height / 2.0f + 360;
 				SDL_Rect dstRect = { static_cast<int>(x), static_cast<int>(y), sprite.width, sprite.height };
 				SDL_RenderCopy(g_renderer, sprite.sprite->GetTexture(), nullptr, &dstRect);
-			}
-			else
-			{
-				sprite.animation->Render(g_renderer);
 			}
 		}
 	}

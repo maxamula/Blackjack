@@ -1,23 +1,63 @@
 #pragma once
 #include "card.h"
 #include <stack>
+#include <random>
 
 namespace blackjack
 {
+	struct CARD_INFO
+	{
+		CARD_SUIT suit;
+		uint32_t val;
+	};
+
 	class Deck
 	{
 	public:
-		Deck(const GameObject& object)
-			: m_object(object)
+		Deck()
 		{
-			auto& transform = m_object.GetTransformation();
-			m_object.SetSprite(CMP_SPRITE::CreateSprite("C:\\deck.png"));
-			transform.x = 0.7;
-			transform.y = 0.2;
+			for (uint32_t suit = 0; suit < 4; suit++) {
+				for (uint32_t value = 2; value <= 14; value++) {
+					m_stack.emplace(CARD_INFO{ (CARD_SUIT)suit, value });
+				}
+			}
+
+			Shuffle();
+		}
+
+		CARD_INFO PullCard()
+		{
+			auto card = m_stack.top();
+			m_stack.pop();
+			return card;
+		}
+
+		void Shuffle()
+		{
+			// create a random number generator and distribution
+			std::mt19937 rng{ std::random_device{}() };
+			std::uniform_int_distribution<size_t> dist{ 0, m_stack.size() - 1 };
+
+			// copy the elements of the stack to a vector
+			auto cards = std::vector<CARD_INFO>{};
+			while (!m_stack.empty()) {
+				cards.push_back(m_stack.top());
+				m_stack.pop();
+			}
+
+			// shuffle the vector using the Fisher-Yates algorithm
+			for (size_t i = cards.size() - 1; i > 0; i--) {
+				size_t j = dist(rng) % (i + 1);
+				std::swap(cards[i], cards[j]);
+			}
+
+			// copy the shuffled elements back to the stack
+			for (auto&& card : cards) {
+				m_stack.push(std::move(card));
+			}
 		}
 
 	private:
-		GameObject m_object;
-		std::stack<PlayCard> m_stack;
+		std::stack<CARD_INFO> m_stack;
 	};
 }
