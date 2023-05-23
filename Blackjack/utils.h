@@ -16,32 +16,61 @@ namespace blackjack
 
         void operator+=(const EventCallback& callback)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             m_callbacks.emplace_back(callback);
         }
 
         void operator -= (const EventCallback& callback)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             m_callbacks.erase(std::remove(m_callbacks.begin(), m_callbacks.end(), callback), m_callbacks.end());
         }
 
         void operator()(Args... args)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             for (auto& callback : m_callbacks)
                 callback(args...);
         }
 
         void Clear()
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             m_callbacks.clear();
         }
 
     private:
         std::vector<EventCallback> m_callbacks;
-        std::mutex m_mutex;
+    };
+
+    template<typename ...Args>
+    class OneTimeEvent
+    {
+    public:
+        typedef std::function<void(Args...)> EventCallback;
+
+        void operator+=(const EventCallback& callback)
+        {
+            m_callbacks.push(callback);
+        }
+
+        void operator -= (const EventCallback& callback)
+        {
+            m_callbacks.erase(std::remove(m_callbacks.begin(), m_callbacks.end(), callback), m_callbacks.end());
+        }
+
+        void operator()(Args... args)
+        {
+            while (!m_callbacks.empty())
+            {
+                m_callbacks.top()(args...);
+                m_callbacks.pop();
+            }
+        }
+
+        void Clear()
+        {
+            m_callbacks.clear();
+        }
+
+    private:
+        std::stack<EventCallback> m_callbacks;
     };
 
     template <typename T>

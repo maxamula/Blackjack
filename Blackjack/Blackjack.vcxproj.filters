@@ -2,14 +2,12 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="UI\idrawable.cpp" />
     <ClCompile Include="Game\deck.cpp" />
     <ClCompile Include="Game\card.cpp" />
     <ClCompile Include="Core\scene.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="Core\components.cpp" />
     <ClCompile Include="Core\animations.cpp" />
-    <ClCompile Include="Game\mainmenu.cpp" />
     <ClCompile Include="Core\resource.cpp" />
     <ClCompile Include="Game\game.cpp" />
     <ClCompile Include="Game\hand.cpp" />
@@ -20,20 +18,20 @@
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Game\options.cpp" />
+    <ClCompile Include="Game\bet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
-    <ClInclude Include="UI\idrawable.h" />
     <ClInclude Include="Game\deck.h" />
     <ClInclude Include="Game\card.h" />
     <ClInclude Include="Core\scene.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="Core\components.h" />
     <ClInclude Include="Core\animations.h" />
-    <ClInclude Include="Game\mainmenu.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Core\resource.h" />
     <ClInclude Include="Game\game.h" />
@@ -46,5 +44,7 @@
     <ClInclude Include="imgui\imstb_rectpack.h" />
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="Game\options.h" />
+    <ClInclude Include="Game\bet.h" />
   </ItemGroup>
 </Project>

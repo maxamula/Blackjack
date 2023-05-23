@@ -1,12 +1,12 @@
-#include "UI/idrawable.h"
 #include "Core/scene.h"
 #include "Game/deck.h"
-#include "Game/mainmenu.h"
 #include "Game/player.h"
 #include "Game/game.h"
 #include "Core/animations.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_sdl.h"
+#include "Game/options.h"
+#include "SDL_mixer.h"
 
 #undef min
 
@@ -16,6 +16,27 @@ namespace blackjack
     SDL_Renderer* g_renderer{ nullptr };
 
     Scene* g_pActiveScene = nullptr;
+    std::unique_ptr<Game> g_game;
+    std::unique_ptr<Options> g_options;
+    Player g_player;
+
+    OneTimeEvent<> g_defferedAction;
+
+    void GotoGame()
+    {
+        g_pActiveScene = g_game.get();
+    }
+
+    void GotoOptions()
+    {
+        g_pActiveScene = g_options.get();
+    }
+
+    void NewGame()
+    {
+        g_game = std::make_unique<Game>(g_player);
+        g_pActiveScene = g_game.get();
+    }
 }
 
 using namespace blackjack;
@@ -39,7 +60,9 @@ void _UpdateSize()
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     PSTR lpCmdLine, int nCmdShow)
 {
-    SDL_Init(SDL_INIT_VIDEO);    
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
+    Mix_Volume(-1, 128);
 
     g_mainWindow = SDL_CreateWindow("Blackjack alpha", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_SHOWN /*SDL_WINDOW_RESIZABLE*/);
     g_renderer = SDL_CreateRenderer(g_mainWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -53,13 +76,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(1.2f);
 
+    // Set working dir
+    {
+        wchar_t buffer[MAX_PATH];
+        GetModuleFileName(NULL, buffer, MAX_PATH);
+        std::wstring executablePath(buffer);
+        std::wstring executableDir = executablePath.substr(0, executablePath.find_last_of(L"\\/"));
+        SetCurrentDirectory(executableDir.c_str());
+    }
+    
+    Mix_Music* music = Mix_LoadMUS("assets\\bg.mp3");
+    Mix_VolumeMusic(40);
+    Mix_PlayMusic(music, -1);
+    
+    SDL_Texture* bgTexture = IMG_LoadTexture(g_renderer, "assets\\bg.jpg");
+    PlayCard::LoadSkinSet("assets\\normal");
 
-    SDL_Texture* bgTexture = IMG_LoadTexture(g_renderer, "C:\\bg.jpg");
-    PlayCard::LoadSkinSet("C:\\normal");
-    Scene scene;
-    g_pActiveScene = &scene;
-    Player p;
-    Game game(scene, p);
+    g_game = std::make_unique<Game>(g_player);
+    g_options = std::make_unique<Options>();
+    g_pActiveScene = g_game.get();
 
     bool isRunning = true;
     std::thread renderThread([&]() {
@@ -68,21 +103,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 255);
             SDL_RenderClear(g_renderer);
             // Отрисовка графики здесь
-            SDL_RenderCopy(g_renderer, bgTexture, nullptr, nullptr);
             ImGui::NewFrame();
+            SDL_RenderCopy(g_renderer, bgTexture, nullptr, nullptr);
 #ifdef _DEBUG
             ImGui::SetNextWindowPos(ImVec2(0, 0));
             ImGui::SetNextWindowSize(ImVec2(300, 500));
             ImGui::Begin("Debug view", nullptr, ImGuiWindowFlags_NoResize);
             g_pActiveScene->DrawDebugOverlay();
-            game.DrawDebugOverlay();
+            g_game->DrawDebugOverlay();
             ImGui::End();
 #endif
+            ImGui::SetNextWindowPos(ImVec2(300, 0));
+            ImGui::SetNextWindowSize(ImVec2(300, 200));
+            
             g_pActiveScene->Overlay();
             ImGui::Render();
-            ImGuiSDL::Render(ImGui::GetDrawData());
             if (g_pActiveScene)
                 g_pActiveScene->Render();
+            ImGuiSDL::Render(ImGui::GetDrawData());
             SDL_RenderPresent(g_renderer);
         }
     });
@@ -91,7 +129,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     while (isRunning)
     {
         auto start = std::chrono::high_resolution_clock::now();
-
         ImGuiIO& io = ImGui::GetIO();
         int wheel = 0;
         while (SDL_PollEvent(&event))
@@ -105,7 +142,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             case SDL_KEYDOWN:
 #ifdef _DEBUG
                 if (event.key.keysym.sym == SDLK_F1)
-                    game.Hit();
+                {
+                    Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                    GotoOptions();
+                }
+                if (event.key.keysym.sym == SDLK_F2)
+                {
+                    GotoGame();
+                }
 #endif
                 break;
             case SDL_EventType::SDL_WINDOWEVENT:
@@ -141,13 +185,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
         io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
         io.MouseWheel = static_cast<float>(wheel);
+
+        g_defferedAction();
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float, std::milli> duration = end - start;
         dt = duration.count();
     }
 
+    SDL_DestroyTexture(bgTexture);
+    
+    Mix_PauseMusic();
+    Mix_FreeMusic(music);
+    g_game.reset();
     PlayCard::FreeSkinSet();
     ImGuiSDL::Deinitialize();
+    Mix_CloseAudio();
     SDL_DestroyRenderer(g_renderer);
     SDL_DestroyWindow(g_mainWindow);
     SDL_Quit();

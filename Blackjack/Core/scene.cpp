@@ -2,6 +2,7 @@
 #include "utils.h"
 #include <queue>
 #include "imgui/imgui.h"
+#include "animations.h"
 
 #define CHECK_VALID if(!IsValid()) throw new std::exception("Ivalid game object")
 
@@ -20,7 +21,6 @@ namespace blackjack
 
 		ItemManager<GAME_OBJECT_NODE> g_objects;
 		std::recursive_mutex g_objMutex;
-
 	} // Anon namespace
 
 	void RenderGameObject(const GameObject& object);
@@ -28,7 +28,13 @@ namespace blackjack
 #pragma region Scene
 	void Scene::Destroy()
 	{
-
+		std::lock_guard lock(g_objMutex);
+		auto rm = m_root;
+		for (auto& object : rm)
+		{
+		    object._Destroy(false);
+		}
+		m_root.clear();
 	}
 
 	GameObject Scene::CreateObject(std::string name)
@@ -90,12 +96,12 @@ namespace blackjack
 	void Scene::_DrawSceneGraphNode(const GameObject& object) const
 	{
 		// Render a node for the current object
-		bool node_open = ImGui::TreeNodeEx(
+		bool nodeOpen = ImGui::TreeNodeEx(
 			(void*)(intptr_t)object.m_id, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow,
-			"%s", object.GetName().c_str());
+			"%s", (object.GetName() + "(" + std::to_string(object.m_id) + ")").c_str());
 
 		// Recursively render the children of this object
-		if (node_open)
+		if (nodeOpen)
 		{
 			const auto& node = g_objects.Get(object.m_id);
 			for (const auto& child : node.children)
@@ -109,25 +115,23 @@ namespace blackjack
 
 	void Scene::HandleEvent(SDL_Event& e) const
 	{
-		for (auto& object : m_root)
+		auto view = m_reg.view<CMP_BLUEPRINT>();
+		for (auto [entity, bp] : view.each())
 		{
-			Blueprint* bp = object.GetBlueprint();
-			if (bp)
-				bp->HandleEvent(e);
+			bp.bp->HandleEvent(e);
 		}
 	}
 
 #pragma endregion
 #pragma region GameObject
-
 	bool GameObject::IsValid() const
 	{
+		std::lock_guard lock(g_objMutex);
 		bool ret = false;
 		ret |= m_id != uint32_invalid;
 		if (ret)
 		{
-			//std::lock_guard lock(g_objMutex);
-			auto& node = g_objects.Get(m_id);
+			GAME_OBJECT_NODE node = g_objects.Get(m_id);
 			ret |= node.scene->m_reg.valid(node.entityId);
 		}
 		return ret;
@@ -161,13 +165,22 @@ namespace blackjack
 
 	void GameObject::Destroy()
 	{
-		std::lock_guard lock(g_objMutex);
+		_Destroy(true);
+		//g_destroyQueue.push_back(*this);
+	}
+
+	void GameObject::_Destroy(bool lock)
+	{	
+		if (!IsValid())
+			return;
+		if(lock)
+			g_objMutex.lock();
 		auto& node = g_objects.Get(m_id);
 		auto scene = node.scene;
 		// recursive delete children and objects down the graph
 		for (auto& child : node.children)
 		{
-			child.Destroy();
+			child._Destroy(false);
 		}
 		// remove from parent
 		if (node.parent.m_id != uint32_invalid)	// NOT root object (parent is another object)
@@ -185,6 +198,11 @@ namespace blackjack
 		}
 		// Remove from components registry
 		scene->m_reg.destroy(node.entityId);
+		// remove from global registry
+		g_objects.Remove(m_id);
+		m_id = uint32_invalid;
+		if (lock)
+			g_objMutex.unlock();
 	}
 
 	CMP_TRANSFORMATION& GameObject::GetTransformation() const

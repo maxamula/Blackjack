@@ -38,7 +38,6 @@ namespace blackjack
 			std::mt19937 rng{ std::random_device{}() };
 			std::uniform_int_distribution<size_t> dist{ 0, m_stack.size() - 1 };
 
-			// copy the elements of the stack to a vector
 			auto cards = std::vector<CARD_INFO>{};
 			while (!m_stack.empty()) {
 				cards.push_back(m_stack.top());
@@ -51,9 +50,8 @@ namespace blackjack
 				std::swap(cards[i], cards[j]);
 			}
 
-			// copy the shuffled elements back to the stack
 			for (auto&& card : cards) {
-				m_stack.push(std::move(card));
+				m_stack.push(card);
 			}
 		}
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "SDL_image.h"
+#include "SDL_mixer.h"
 
 namespace blackjack
 {
@@ -87,4 +88,27 @@ namespace blackjack
 			SDL_DestroyTexture(m_tex);
 		}
 	};
+
+	class Sound : public Resource
+	{
+	public:
+		void Play() const
+		{
+			Mix_PlayChannel(-1, m_sound, 0);
+		}
+	private:
+		Mix_Chunk* m_sound;
+	protected:
+		void _Load(std::string path) override
+		{
+			m_sound = Mix_LoadWAV(path.c_str());
+		}
+
+		void _Free() override
+		{
+			Mix_FreeChunk(m_sound);
+		}
+	};
+
+	
 }

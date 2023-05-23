@@ -1,11 +1,11 @@
 #pragma once
 #include "entt/entt.hpp"
 #include "components.h"
+#include <mutex>
 
 namespace blackjack
 {
 	class Scene;
-
 	class Blueprint;
 	struct CMP_BLUEPRINT
 	{
@@ -17,21 +17,16 @@ namespace blackjack
 		friend class Scene;
 	public:
 		GameObject() = default;
-
 		inline bool operator==(const GameObject& o) const { return m_id == o.m_id; }
-
 		bool IsValid() const;
-
 		Scene& GetScene() const;
 		std::string GetName() const;
-
 		GameObject CreateObject(std::string name);
 		void Destroy();
 
 
 
 		// Components managing stuff here
-
 		CMP_TRANSFORMATION& GetTransformation() const;		
 		void SetSprite(const CMP_SPRITE& sprite);
 		CMP_SPRITE& GetSprite() const;
@@ -42,6 +37,7 @@ namespace blackjack
 
 		void SetOverlay(std::function<void(void)> func);
 	private:
+		void _Destroy(bool lock);
 		uint32_t m_id = uint32_invalid;
 	};
 

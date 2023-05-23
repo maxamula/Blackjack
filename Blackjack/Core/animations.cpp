@@ -3,21 +3,20 @@
 
 namespace blackjack
 {
-    std::vector<Animation*> Animation::s_animations;
+    std::vector<std::unique_ptr<Animation>> Animation::s_animations;
+    std::recursive_mutex Animation::s_animationsMutex;
 
     class AnimationPathEaseInOut : public Animation
     {
     public:
-        AnimationPathEaseInOut(GameObject obj, int toX, int toY, float playTime, FnAnimationCallback callback)
-            : Animation(obj), playTime(playTime), toX(toX), toY(toY)
+        AnimationPathEaseInOut(GameObject obj, int toX, int toY, float playTime, std::function<void()> callback)
+            : Animation(obj), playTime(playTime), toX(toX), toY(toY), callback(callback)
         {
             if (m_object.IsValid())
             {
                 CMP_TRANSFORMATION& tr = m_object.GetTransformation();
-                startX = tr.x; // Assuming 'x' and 'y' are the current position components of the object
+                startX = tr.x;
                 startY = tr.y;
-
-                // Calculate the distance to move
                 distanceX = toX - startX;
                 distanceY = toY - startY;
             }     
@@ -41,13 +40,9 @@ namespace blackjack
                 return true; // indicate to remove finished animation
             }
 
-            // Calculate the animation progress
             float progress = currentTime / playTime;
-
-            // Apply a smooth curve
             progress = (progress < 0.5f) ? 2 * progress * progress : (-2 * progress * progress) + (4 * progress) - 1;
 
-            // Calculate the new position of the object based on the animation progress
             int currentX = startX + static_cast<int>(distanceX * progress);
             int currentY = startY + static_cast<int>(distanceY * progress);
 
@@ -65,11 +60,13 @@ namespace blackjack
         int distanceX, distanceY;
         float currentTime = 0;
         float playTime;
-        FnAnimationCallback callback;
+        std::function<void()> callback;
     };
 
-    void PlayAnimationMove(GameObject object, int toX, int toY, float playTime, FnAnimationCallback callback = nullptr)
+    void PlayAnimationMove(GameObject object, int toX, int toY, float playTime, std::function<void()> callback)
     {
-        new AnimationPathEaseInOut(object, toX, toY, playTime, callback);
+        auto animation = std::make_unique<AnimationPathEaseInOut>(object, toX, toY, playTime, callback);
+        std::lock_guard lock(Animation::s_animationsMutex);
+        Animation::s_animations.push_back(std::move(animation));
     }
 }

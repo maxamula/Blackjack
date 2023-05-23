@@ -48,10 +48,6 @@ namespace blackjack
 
 	void PlayCard::Flip(bool visible)
 	{
-		//auto j =g_cardSprites[m_suit][m_value - 2];
-		if (visible)
-			m_cardObject.SetSprite(g_cardSprites[m_suit][m_value - 2]);
-		else
-			m_cardObject.SetSprite(g_backSprite);
+		visible ? m_cardObject.SetSprite(g_cardSprites[m_suit][m_value - 2]) : m_cardObject.SetSprite(g_backSprite);
 	}
 }

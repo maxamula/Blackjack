@@ -28,12 +28,9 @@ namespace blackjack
 			if (m_value == 14) return 11;
 			return m_value < 10 ? m_value : 10;
 		}
-
 		inline CARD_SUIT Suit() const { return m_suit; }
 		inline uint32_t Value() const { return m_value; }
-		
 		void Flip(bool visible);
-
 		inline GameObject& GetObject() { return m_cardObject; }
 	private:
 		GameObject m_cardObject;
