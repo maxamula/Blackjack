@@ -140,17 +140,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                 renderThread.join();
                 break;
             case SDL_KEYDOWN:
-#ifdef _DEBUG
                 if (event.key.keysym.sym == SDLK_F1)
-                {
                     Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
-                    GotoOptions();
-                }
-                if (event.key.keysym.sym == SDLK_F2)
-                {
-                    GotoGame();
-                }
-#endif
                 break;
             case SDL_EventType::SDL_WINDOWEVENT:
                 switch (event.window.event)
